@@ -835,6 +835,11 @@
                       ]
                     },
                     "default": []
+                  },
+                  "batchId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
                   }
                 },
                 "required": [
@@ -1037,6 +1042,11 @@
                         "lineItems"
                       ]
                     }
+                  },
+                  "batchId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
                   }
                 },
                 "required": [

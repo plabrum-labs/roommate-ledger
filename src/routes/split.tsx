@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import {
   getListInvoicesSuspenseQueryOptions,
@@ -56,6 +56,10 @@ function Split() {
   const [descriptionOverride, setDescriptionOverride] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<DraftState[]>([])
 
+  // Idempotency key for the create call: reused while the payload is unchanged (a retry after a dropped
+  // response must not duplicate invoices), replaced as soon as the user edits anything.
+  const attempt = useRef<{ payload: string; batchId: string } | null>(null)
+
   const rebuild = (nextBills: string[], nextRoommates: string[]): void => {
     setBillIds(nextBills)
     setRoommateIds(nextRoommates)
@@ -100,8 +104,10 @@ function Split() {
       const lineItems = lineItemsPerDraft[i]
       return lineItems ? [{ payerId: d.payerId, description, dueDate, issuedAt: d.issuedAt, lineItems }] : []
     })
+    const payload = JSON.stringify(invoices)
+    if (attempt.current?.payload !== payload) attempt.current = { payload, batchId: crypto.randomUUID() }
     create.mutate(
-      { data: { invoices } },
+      { data: { invoices, batchId: attempt.current.batchId } },
       {
         onSuccess: () => {
           void refreshLedger(queryClient).then(() => navigate({ to: '/' }))

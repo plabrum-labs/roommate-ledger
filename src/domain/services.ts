@@ -1,7 +1,7 @@
-import { and, eq, ne, sql } from 'drizzle-orm'
+import { and, asc, eq, ne, sql } from 'drizzle-orm'
 
 import type { Db } from '@/db/client'
-import { invoiceLineItems, invoices, invoiceTransitions, parties, payments } from '@/db/schema'
+import { invoiceBatches, invoiceLineItems, invoices, invoiceTransitions, parties, payments } from '@/db/schema'
 import { ledger, ME } from '@/ledger'
 
 import { Conflict, Invalid, NotFound } from './errors'
@@ -47,10 +47,10 @@ function issued(input: NewInvoice): InvoiceWithLines {
  * amount, so the CHECK holds), then its lines (the sum trigger recomputes the same amount), then the
  * ledger lines (after which the lines are frozen and the settlement trigger sees everything).
  */
-function issueStatements(db: Db, doc: InvoiceWithLines) {
+function issueStatements(db: Db, doc: InvoiceWithLines, batchId: string | null = null) {
   const { lineItems, ...invoice } = doc
   return [
-    db.insert(invoices).values(invoice),
+    db.insert(invoices).values({ ...invoice, batchId }),
     db.insert(invoiceLineItems).values(lineItems),
     ...ledger(db).post('invoiceIssued', doc)
   ] as const
@@ -90,8 +90,55 @@ export async function createInvoice(db: Db, input: NewInvoice): Promise<InvoiceW
   return issueInvoice(db, input)
 }
 
-/** Roommate invoices (payee = me), all issued in a single D1 batch: either every invoice exists afterwards or none. */
-export async function createInvoices(db: Db, inputs: readonly NewInvoice[]): Promise<InvoiceWithLines[]> {
+/** Idempotency key for a bulk create: the client's batch id and a hash of what the request asked for. */
+export interface BatchKey {
+  id: string
+  fingerprint: string
+}
+
+/** SHA-256 of the JSON encoding of `value`; callers pass already-normalised data so equal requests encode equally. */
+export async function fingerprintOf(value: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(value))
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * The invoices a batch already created, in creation order; null when the batch is new. The same id
+ * with a different request is a Conflict, never a silent second create.
+ */
+export async function replayBatch(db: Db, batch: BatchKey): Promise<InvoiceWithLines[] | null> {
+  const [existing] = await db.select().from(invoiceBatches).where(eq(invoiceBatches.id, batch.id))
+  if (!existing) return null
+  if (existing.fingerprint !== batch.fingerprint) {
+    throw new Conflict(`Batch ${batch.id} was already used for a different request`)
+  }
+  const rows = await db
+    .select({ id: invoices.id })
+    .from(invoices)
+    .where(eq(invoices.batchId, batch.id))
+    .orderBy(asc(sql`rowid`))
+  return invoicesWithLines(
+    db,
+    rows.map(r => r.id)
+  )
+}
+
+/**
+ * Roommate invoices (payee = me), all issued in a single D1 batch: either every invoice exists afterwards or none.
+ * With a `batch` key the create is idempotent: the key row is inserted in the same D1 batch, so it exists
+ * exactly when the invoices do, and a replay returns them instead of creating more.
+ */
+export async function createInvoices(
+  db: Db,
+  inputs: readonly NewInvoice[],
+  batch?: BatchKey,
+  now: string = new Date().toISOString()
+): Promise<InvoiceWithLines[]> {
+  if (batch) {
+    const replay = await replayBatch(db, batch)
+    if (replay) return replay
+  }
   const ids = inputs.map(i => i.id)
   if (new Set(ids).size !== ids.length) throw new Invalid('Duplicate invoice ids in batch')
   const found = await getParties(db, [ME, ...inputs.map(i => i.payerId)])
@@ -102,9 +149,19 @@ export async function createInvoices(db: Db, inputs: readonly NewInvoice[]): Pro
   const existing = await invoicesByIds(db, ids)
   if (existing.length > 0) throw new Conflict(`Invoice ${existing.map(e => e.id).join(', ')} already exists`)
   const docs = inputs.map(issued)
-  const [first, ...rest] = docs.flatMap(doc => issueStatements(db, doc))
+  const statements = docs.flatMap(doc => issueStatements(db, doc, batch?.id ?? null))
+  const [first, ...rest] = batch
+    ? [db.insert(invoiceBatches).values({ ...batch, createdAt: now }), ...statements]
+    : statements
   if (!first) throw new Invalid('No invoices given')
-  await db.batch([first, ...rest])
+  try {
+    await db.batch([first, ...rest])
+  } catch (error) {
+    // A concurrent request with the same key won the primary-key race; whatever it created is the answer.
+    const replay = batch ? await replayBatch(db, batch) : null
+    if (replay) return replay
+    throw error
+  }
   return invoicesWithLines(db, ids)
 }
 
@@ -145,13 +202,23 @@ export interface SplitPreview {
  * split equally across the roommates and me (largest remainder; my share is not invoiced), giving
  * each roommate one share line per bill line, followed by their extra lines.
  */
-export async function previewSplit(db: Db, input: InvoiceRoommatesInput, issuedAt: string): Promise<SplitPreview> {
+export function previewSplit(db: Db, input: InvoiceRoommatesInput, issuedAt: string): Promise<SplitPreview> {
+  return planSplit(db, input, issuedAt, true)
+}
+
+/** `requireLive` is off only when re-deriving totals for a replay, where the bills may have been voided since. */
+async function planSplit(
+  db: Db,
+  input: InvoiceRoommatesInput,
+  issuedAt: string,
+  requireLive: boolean
+): Promise<SplitPreview> {
   const providerIds = [...new Set(input.providerInvoiceIds)]
   const roommateIds = [...new Set(input.roommateIds)]
   const bills = await invoicesWithLines(db, providerIds)
   const missing = providerIds.filter(id => !bills.some(b => b.id === id))
   if (missing.length > 0) throw new NotFound(`Provider invoice ${missing.join(', ')} not found`)
-  const bad = bills.find(b => b.payerId !== ME || b.status === 'void')
+  const bad = bills.find(b => b.payerId !== ME || (requireLive && b.status === 'void'))
   if (bad) throw new Invalid(`Invoice ${bad.id} is not a live provider bill`)
 
   const roommates = await getParties(db, roommateIds)
@@ -186,17 +253,57 @@ export interface InvoiceRoommatesResult {
   invoices: InvoiceWithLines[]
 }
 
-/** Previews the split, then issues one combined invoice per roommate in a single batch. */
+/** What a split request asked for, normalised so equal requests hash equally (an omitted `issuedAt` means "now"). */
+async function splitKey(batchId: string, input: InvoiceRoommatesInput): Promise<BatchKey> {
+  const fingerprint = await fingerprintOf({
+    kind: 'split',
+    providerInvoiceIds: [...new Set(input.providerInvoiceIds)].sort(),
+    roommateIds: [...new Set(input.roommateIds)],
+    description: input.description ?? null,
+    dueDate: input.dueDate,
+    issuedAt: input.issuedAt ?? null,
+    extraLines: (input.extraLines ?? []).map(e => [e.roommateId, e.description, e.category, e.amountCents])
+  })
+  return { id: batchId, fingerprint }
+}
+
+/**
+ * The result of a split already created under `batchId`, or null when the batch is new. Totals are
+ * recomputed from the (immutable) provider bills, which may have been voided since.
+ */
+export async function replaySplit(
+  db: Db,
+  input: InvoiceRoommatesInput,
+  batchId: string
+): Promise<InvoiceRoommatesResult | null> {
+  const invoices = await replayBatch(db, await splitKey(batchId, input))
+  if (!invoices) return null
+  const { totalCents, myShareCents } = await planSplit(db, input, new Date().toISOString(), false)
+  return { totalCents, myShareCents, invoices }
+}
+
+/**
+ * Previews the split, then issues one combined invoice per roommate in a single batch. With a `batchId`
+ * the whole call is idempotent: the same id and request returns the invoices already created, the same
+ * id with a different request is a Conflict.
+ */
 export async function invoiceRoommates(
   db: Db,
   input: InvoiceRoommatesInput,
   issuedAt: string,
-  newId: () => string = () => crypto.randomUUID()
+  newId: () => string = () => crypto.randomUUID(),
+  batchId?: string
 ): Promise<InvoiceRoommatesResult> {
+  if (batchId !== undefined) {
+    const replay = await replaySplit(db, input, batchId)
+    if (replay) return replay
+  }
   const { totalCents, myShareCents, drafts } = await previewSplit(db, input, issuedAt)
   const created = await createInvoices(
     db,
-    drafts.map(({ totalCents: _total, ...draft }) => ({ ...draft, id: newId(), payeeId: ME }))
+    drafts.map(({ totalCents: _total, ...draft }) => ({ ...draft, id: newId(), payeeId: ME })),
+    batchId === undefined ? undefined : await splitKey(batchId, input),
+    issuedAt
   )
   return { totalCents, myShareCents, invoices: created }
 }

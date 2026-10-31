@@ -25,6 +25,9 @@ parties: id, name, kind: 'me' | 'roommate' | 'provider', venmoHandle (roommates 
 
 The payment channel is a property of the party, not the invoice.
 
+The single `me` party is created by migration `0003_seed_me_party.sql` (the API refuses to create kind `me`), so a freshly
+migrated database already has it.
+
 ### Invoices — documents
 
 ```ts
@@ -36,7 +39,8 @@ invoices:
   dueDate   NOT NULL,
   status: 'issued' | 'requested' | 'void',            -- lifecycle (human decisions)
   settlement: 'unpaid' | 'partially_paid' | 'paid',   -- cache, maintained by trigger
-  appliedCents (int)                                  -- cache, maintained by trigger
+  appliedCents (int),                                 -- cache, maintained by trigger
+  batchId → invoice_batches (nullable)                -- set when created under an idempotency key
 ```
 
 - A provider bill (ConEd → me) and a roommate invoice (me → Sam) are the same thing.
@@ -44,6 +48,21 @@ invoices:
 - No parent link: a roommate invoice may cover any number of provider bills, issued any time later.
 - Invoices are immutable except `status` (and the trigger-maintained cache). Corrections are
   void + reissue; a reissue keeps the original `issuedAt` so it keeps its FIFO position.
+
+### Idempotent bulk creation
+
+`invoice_batches (id PK, fingerprint, createdAt)` holds client-supplied idempotency keys; `invoices.batch_id`
+points at it. `createInvoices` and `invoiceRoommates` take an optional `batchId`:
+
+- The batch row is the first statement of the same D1 batch that issues the invoices, so it exists exactly
+  when they do, and the primary key makes a second create of the same id impossible (a concurrent loser
+  catches the constraint error and returns the winner's invoices).
+- `fingerprint` is a SHA-256 of the normalised request (kind `batch` or `split`, an omitted `issuedAt` counts as
+  "now", not as a value). Same id and fingerprint: the existing invoices are returned (status 201 again) and nothing
+  is written. Same id, different fingerprint: 409. Replay is checked before anything else is validated, so
+  a replay still succeeds after the provider bills were voided.
+- Without a `batchId` nothing changes: every call creates. `createInvoice` (single) already has its client `id`.
+- The UI split flow generates a key per create payload and reuses it for retries; editing the drafts makes a new payload and so a new key.
 
 ### Invoice line items
 
@@ -356,22 +375,22 @@ export class InvoiceController {
 Schemas and types share a name (`export const X = z.object(...); export type X = z.infer<typeof X>`).
 Every route sets `method` and `operationId` explicitly (Orval hook names; oRPC defaults to POST).
 
-| Operation                     | Route                                                                                                 |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `listParties` / `createParty` | `GET` / `POST /parties`                                                                               |
-| `listInvoices`                | `GET /invoices?direction=&status=&settlement=`                                                        |
-| `getInvoice`                  | `GET /invoices/{id}`                                                                                  |
-| `createInvoice`               | `POST /invoices` — body takes `lineItems` (min 1), not amount/category                                |
-| `createInvoices`              | `POST /invoices/batch` — `{ invoices: [{ payerId, description, dueDate, lineItems }] }`, one D1 batch |
-| `previewSplit`                | `POST /invoices/split/preview` — same body as `invoiceRoommates`; returns drafts, writes nothing      |
-| `invoiceRoommates`            | `POST /invoices/split` — preview + create in one call: one combined invoice per roommate              |
-| `requestInvoice`              | `POST /invoices/{id}/request`                                                                         |
-| `voidInvoice`                 | `POST /invoices/{id}/void`                                                                            |
-| `recordPayment`               | `POST /payments`                                                                                      |
-| `listPayments`                | `GET /payments?partyId=`                                                                              |
-| `listBalances`                | `GET /balances`                                                                                       |
-| `getStatement`                | `GET /accounts/{id}/statement?from=&to=`                                                              |
-| `getPosting`                  | `GET /postings/{entryGroupId}`                                                                        |
+| Operation                     | Route                                                                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listParties` / `createParty` | `GET` / `POST /parties`                                                                                                                        |
+| `listInvoices`                | `GET /invoices?direction=&status=&settlement=`                                                                                                 |
+| `getInvoice`                  | `GET /invoices/{id}`                                                                                                                           |
+| `createInvoice`               | `POST /invoices` — body takes `lineItems` (min 1), not amount/category                                                                         |
+| `createInvoices`              | `POST /invoices/batch` — `{ invoices: [{ payerId, description, dueDate, lineItems }], batchId? }`, one D1 batch; `batchId` makes it idempotent |
+| `previewSplit`                | `POST /invoices/split/preview` — same body as `invoiceRoommates`; returns drafts, writes nothing                                               |
+| `invoiceRoommates`            | `POST /invoices/split` — preview + create in one call: one combined invoice per roommate; optional `batchId` (idempotent)                      |
+| `requestInvoice`              | `POST /invoices/{id}/request`                                                                                                                  |
+| `voidInvoice`                 | `POST /invoices/{id}/void`                                                                                                                     |
+| `recordPayment`               | `POST /payments`                                                                                                                               |
+| `listPayments`                | `GET /payments?partyId=`                                                                                                                       |
+| `listBalances`                | `GET /balances`                                                                                                                                |
+| `getStatement`                | `GET /accounts/{id}/statement?from=&to=`                                                                                                       |
+| `getPosting`                  | `GET /postings/{entryGroupId}`                                                                                                                 |
 
 Summaries carry `lineCount`; the detail adds `lineItems`. Statement lines carry a discriminated-union `source` (`invoice` | `payment`) and a party-perspective
 signed amount with a running balance (window function over the account's index range).

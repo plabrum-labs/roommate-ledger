@@ -21,4 +21,9 @@ export type InvoiceRoommatesBody = {
   dueDate: string;
   issuedAt?: string;
   extraLines?: InvoiceRoommatesBodyExtraLinesItem[];
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  batchId?: string;
 };

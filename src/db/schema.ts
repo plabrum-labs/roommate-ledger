@@ -21,6 +21,16 @@ export const accounts = sqliteTable('accounts', {
   kind: text('kind', { enum: ACCOUNT_KINDS }).notNull()
 })
 
+/**
+ * Idempotency keys for creating invoices in bulk. The client-supplied id is the primary key, so a batch
+ * can be created once; `fingerprint` hashes the request so a replay can tell "same" from "different".
+ */
+export const invoiceBatches = sqliteTable('invoice_batches', {
+  id: text('id').primaryKey(),
+  fingerprint: text('fingerprint').notNull(),
+  createdAt: text('created_at').notNull()
+})
+
 export const invoices = sqliteTable(
   'invoices',
   {
@@ -38,14 +48,17 @@ export const invoices = sqliteTable(
     dueDate: text('due_date').notNull(),
     status: text('status', { enum: INVOICE_STATUSES }).notNull().default('issued'),
     settlement: text('settlement', { enum: SETTLEMENTS }).notNull().default('unpaid'),
-    appliedCents: integer('applied_cents').notNull().default(0)
+    appliedCents: integer('applied_cents').notNull().default(0),
+    /** Set when the invoice was created as part of an idempotent batch. */
+    batchId: text('batch_id').references(() => invoiceBatches.id)
   },
   t => [
     check('invoices_amount_positive', sql`${t.amountCents} > 0`),
     check('invoices_applied_range', sql`${t.appliedCents} >= 0 AND ${t.appliedCents} <= ${t.amountCents}`),
     check('invoices_parties_differ', sql`${t.payerId} != ${t.payeeId}`),
     index('invoices_payer_idx').on(t.payerId, t.issuedAt),
-    index('invoices_payee_idx').on(t.payeeId, t.issuedAt)
+    index('invoices_payee_idx').on(t.payeeId, t.issuedAt),
+    index('invoices_batch_idx').on(t.batchId)
   ]
 )
 

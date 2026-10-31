@@ -5,6 +5,7 @@ import { ME } from '@/ledger'
 import {
   createInvoice,
   createInvoices,
+  fingerprintOf,
   getInvoiceWithLines,
   invoiceRoommates,
   previewSplit,
@@ -23,6 +24,7 @@ import {
   InvoiceDetail,
   InvoiceListQuery,
   InvoiceSplit,
+  InvoiceSplitCreate,
   InvoiceSummary,
   SplitPreview,
   SplitResult
@@ -55,13 +57,13 @@ export class InvoiceController {
 
   @post('/invoices/split', {
     operationId: 'invoiceRoommates',
-    body: InvoiceSplit,
+    body: InvoiceSplitCreate,
     returns: SplitResult,
     status: 201,
     tags
   })
-  async split(ctx: Ctx, data: InvoiceSplit): Promise<SplitResult> {
-    const result = await invoiceRoommates(ctx.db, data, now())
+  async split(ctx: Ctx, { batchId, ...data }: InvoiceSplitCreate): Promise<SplitResult> {
+    const result = await invoiceRoommates(ctx.db, data, now(), undefined, batchId)
     return { ...result, invoices: result.invoices.map(inv => presentInvoice(inv, inv.lineItems.length)) }
   }
 
@@ -81,7 +83,18 @@ export class InvoiceController {
         id: crypto.randomUUID(),
         payeeId: ME,
         issuedAt: draft.issuedAt ?? issuedAt
-      }))
+      })),
+      data.batchId === undefined
+        ? undefined
+        : {
+            id: data.batchId,
+            // An omitted issuedAt means "now", so it cannot be part of what a replay is compared on.
+            fingerprint: await fingerprintOf({
+              kind: 'batch',
+              invoices: data.invoices.map(d => ({ ...d, issuedAt: d.issuedAt ?? null }))
+            })
+          },
+      issuedAt
     )
     return { invoices: created.map(inv => presentInvoiceDetail(inv, [])) }
   }

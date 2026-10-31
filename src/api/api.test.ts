@@ -383,3 +383,66 @@ describe('payments, balances, statement, posting', () => {
     expect((await call('GET', '/postings/nope')).status).toBe(404)
   })
 })
+
+describe('batch idempotency', () => {
+  const splitBody = (batchId?: string, overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    providerInvoiceIds: ['c1'],
+    roommateIds: ['sam', 'alex'],
+    dueDate: '2026-04-01',
+    ...(batchId === undefined ? {} : { batchId }),
+    ...overrides
+  })
+  const draft = (payerId: string, amountCents: number): Record<string, unknown> => ({
+    payerId,
+    description: 'Utilities',
+    dueDate: '2026-04-01',
+    lineItems: [{ description: 'Share', category: 'utilities', amountCents }]
+  })
+
+  it('replaying a split with the same key returns the same invoices and creates nothing more', async () => {
+    await providerBill('c1', 9000, '2026-01-01T00:00:00Z')
+    const first = await ok<SplitResult>('POST', '/invoices/split', splitBody('b-1'))
+    const replay = await ok<SplitResult>('POST', '/invoices/split', splitBody('b-1'))
+    expect(replay).toEqual(first)
+    expect(await ok<InvoiceDetail[]>('GET', '/invoices?direction=outgoing')).toHaveLength(2)
+    await assertConsistent(db)
+  })
+
+  it('replays a split even after its provider bill was voided', async () => {
+    await providerBill('c1', 9000, '2026-01-01T00:00:00Z')
+    const first = await ok<SplitResult>('POST', '/invoices/split', splitBody('b-1'))
+    await ok('POST', '/invoices/c1/void')
+    expect(await ok<SplitResult>('POST', '/invoices/split', splitBody('b-1'))).toEqual(first)
+  })
+
+  it('answers 409 for the same key with a different split', async () => {
+    await providerBill('c1', 9000, '2026-01-01T00:00:00Z')
+    await ok('POST', '/invoices/split', splitBody('b-1'))
+    expect((await call('POST', '/invoices/split', splitBody('b-1', { roommateIds: ['sam'] }))).status).toBe(409)
+    expect((await call('POST', '/invoices/split', splitBody('b-1', { description: 'Other' }))).status).toBe(409)
+    expect(await ok<InvoiceDetail[]>('GET', '/invoices?direction=outgoing')).toHaveLength(2)
+  })
+
+  it('replays a batch create and rejects the same key with different content', async () => {
+    const body = { batchId: 'b-2', invoices: [draft('sam', 3000), draft('alex', 3000)] }
+    const first = await ok<InvoiceBatchResult>('POST', '/invoices/batch', body)
+    const replay = await ok<InvoiceBatchResult>('POST', '/invoices/batch', body)
+    expect(replay.invoices.map(i => i.id)).toEqual(first.invoices.map(i => i.id))
+    expect(await ok<InvoiceDetail[]>('GET', '/invoices?direction=outgoing')).toHaveLength(2)
+    const changed = { batchId: 'b-2', invoices: [draft('sam', 3001), draft('alex', 3000)] }
+    expect((await call('POST', '/invoices/batch', changed)).status).toBe(409)
+    // A key used by one endpoint cannot be reused for a different kind of request.
+    await providerBill('c1', 9000, '2026-01-01T00:00:00Z')
+    expect((await call('POST', '/invoices/split', splitBody('b-2'))).status).toBe(409)
+    await assertConsistent(db)
+  })
+
+  it('without a key nothing changes: every call creates', async () => {
+    await providerBill('c1', 9000, '2026-01-01T00:00:00Z')
+    await ok('POST', '/invoices/split', splitBody())
+    await ok('POST', '/invoices/split', splitBody())
+    await ok('POST', '/invoices/batch', { invoices: [draft('sam', 100)] })
+    await ok('POST', '/invoices/batch', { invoices: [draft('sam', 100)] })
+    expect(await ok<InvoiceDetail[]>('GET', '/invoices?direction=outgoing')).toHaveLength(6)
+  })
+})
