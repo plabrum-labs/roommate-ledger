@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "roommate-ledger",
+  "account_id": "42ea0d21baf84d2a10e66a9ff0a421cc",
   "main": "worker.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -13,10 +14,16 @@
     {
       "binding": "DB",
       "database_name": "roommate-ledger",
-      // Placeholder: the real database has not been created. Never run `wrangler d1 create` from tooling.
+      // Terraform owns the database (infra/d1.tf); copy `terraform output d1_database_id` here after the first apply.
+      // While this is the zero placeholder, the Deploy workflow skips migrations and deploy.
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "drizzle"
     }
   ],
+  // Cloudflare Access protects this hostname (infra/access.tf). workers.dev and preview URLs are off so there is no
+  // route to the Worker that skips Access.
+  "routes": [{ "pattern": "roommate-ledger.plabrum.com", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false,
   "observability": { "enabled": true }
 }

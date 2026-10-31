@@ -1,0 +1,78 @@
+name: Terraform
+
+# Plan on PRs (posted as a comment), apply on push to main. Only for changes under infra/.
+on:
+  push:
+    branches: [main]
+    paths: ['infra/**', '.github/workflows/terraform.yml']
+  pull_request:
+    paths: ['infra/**', '.github/workflows/terraform.yml']
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+
+permissions:
+  id-token: write # assume the OIDC role for S3 state access
+  contents: read
+  pull-requests: write # comment the plan on PRs
+
+jobs:
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+    env:
+      TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: 'Configure AWS credentials (OIDC: state bucket only)'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: Format check
+        run: terraform fmt -check -recursive
+
+      - name: Init
+        run: terraform init -input=false -reconfigure -backend-config=backend.hcl
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Plan
+        run: |
+          terraform plan -input=false -no-color -out=tfplan
+          terraform show -no-color tfplan > plan_output.txt
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('./infra/plan_output.txt', 'utf8');
+            const max = 60000;
+            const body = plan.length > max ? plan.slice(0, max) + '\n\n... (truncated)' : plan;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan\n<details><summary>Show plan</summary>\n\n\`\`\`hcl\n${body}\n\`\`\`\n</details>`,
+            });
+
+      - name: Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: terraform apply -input=false -auto-approve tfplan
