@@ -1,0 +1,10 @@
+dist
+node_modules
+.wrangler
+drizzle
+openapi.json
+src/routeTree.gen.ts
+src/api-client/generated
+worker-configuration.d.ts
+package-lock.json
+docs/mocks

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roommate Ledger design mocks</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:#F4F4F2;color:#1c1c1c}
+main{max-width:960px;margin:0 auto;padding:40px 20px 60px}
+h1{font-size:28px;margin:0 0 6px}p.lead{margin:0 0 28px;color:#4d4d4d}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+a.opt{display:block;background:#fff;border:1px solid #cfcfca;border-radius:10px;padding:18px;text-decoration:none;color:inherit}
+a.opt:hover{border-color:#1c1c1c}a.opt:focus-visible{outline:3px solid #1D4ED8;outline-offset:2px}
+a.opt h2{margin:12px 0 6px;font-size:20px}a.opt p{margin:0;color:#3d3d3d}
+img{width:100%;height:auto;display:block;border:1px solid #e0e0dc;border-radius:6px}
+ul{padding:0;margin:14px 0 0;list-style:none;font-size:14px;display:flex;flex-wrap:wrap;gap:6px 14px}
+ul a{color:#1D4ED8}
+@media(max-width:700px){.opts{grid-template-columns:1fr}}
+</style></head><body><main>
+<h1>Roommate Ledger: two visual directions</h1>
+<p class="lead">Same data and the same five screens in each: dashboard, invoice roommates, Sam's statement, one invoice, one posting. Pick one.</p>
+<div class="opts">
+<div><a class="opt" href="option-a/index.html"><img src="option-a/screenshots/dashboard-1280.png" alt="Option A dashboard"><h2>Option A: paper ledger</h2>
+<p>A calm, single-column page on green-tinged paper with a red margin rule. Serif tabular figures, dot leaders between names and balances, accounting-style double-underlined totals, and credits in parentheses-style red ink. Status is a rubber stamp and settlement is a small fill gauge.</p></a>
+<ul><li><a href="option-a/index.html">Dashboard</a></li><li><a href="option-a/split.html">Invoice roommates</a></li><li><a href="option-a/statement.html">Statement</a></li><li><a href="option-a/invoice.html">Invoice</a></li><li><a href="option-a/posting.html">Posting</a></li></ul></div>
+<div><a class="opt" href="option-b/index.html"><img src="option-b/screenshots/dashboard-1280.png" alt="Option B dashboard"><h2>Option B: colour-coded app <span style="font-size:13px;font-weight:600;color:#2F6650;border:1px solid #2F6650;padding:2px 6px;border-radius:2px;vertical-align:middle">Chosen — revised</span></h2>
+<p>Revised after review: muted and square. A dark graphite sidebar on laptop and a bottom tab bar on phone. Each roommate is a neutral card with a muted tinted accent bar and number (ochre owes, green settled, slate-violet credit). 2px corners and 1px borders throughout. Invoices now carry editable line items and Invoice roommates creates one combined invoice per roommate. Status is an outlined tag with a shape icon; settlement is a tinted badge with a square progress bar.</p></a>
+<ul><li><a href="option-b/index.html">Dashboard</a></li><li><a href="option-b/split.html">Invoice roommates</a></li><li><a href="option-b/statement.html">Statement</a></li><li><a href="option-b/invoice.html">Invoice</a></li><li><a href="option-b/posting.html">Posting</a></li></ul></div>
+</div></main></body></html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Balances – Roommate Ledger (Option A)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#E6ECE5;--sheet:#FBFCF7;--ink:#1B2430;--muted:#515D67;--rule:#CBD5CC;--rule2:#7F8E85;
+--blue:#1F4E8C;--violet:#5B3E8F;--red:#9B2C26;--green:#24663F;--amber:#85560A;--margin:#D9A19B}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 17px/1.6 Literata,Georgia,serif;font-optical-sizing:auto}
+.fig{font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum","lnum";white-space:nowrap}
+a{color:var(--blue);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #C98B00;outline-offset:2px}
+.ui{font-family:"Libre Franklin",system-ui,sans-serif}
+.mast{max-width:860px;margin:0 auto;padding:18px 20px 0;display:flex;flex-wrap:wrap;gap:4px 28px;align-items:baseline;justify-content:space-between}
+.brand{font-style:italic;font-weight:600;font-size:21px;color:var(--ink);text-decoration:none}
+nav ul{display:flex;flex-wrap:wrap;gap:0 18px;list-style:none;margin:0;padding:0;font:500 14px "Libre Franklin",system-ui,sans-serif}
+nav a{color:var(--ink);text-decoration:none;padding:7px 0;border-bottom:2px solid transparent;display:inline-block}
+nav a[aria-current=page]{border-bottom-color:var(--red);font-weight:600}
+nav a:hover{border-bottom-color:var(--rule2)}
+.sheet{position:relative;max-width:860px;margin:14px auto 28px;background:var(--sheet);border:1px solid var(--rule);padding:34px 40px 44px 80px}
+.sheet::before{content:"";position:absolute;top:0;bottom:0;left:54px;width:4px;border-left:1px solid var(--margin);border-right:1px solid var(--margin)}
+footer{max-width:860px;margin:0 auto 40px;padding:0 20px;font:13px "Libre Franklin",sans-serif;color:var(--muted)}
+h1{font-size:36px;line-height:1.1;font-weight:500;margin:0;letter-spacing:-.015em}
+h2{font-size:21px;font-weight:600;margin:44px 0 6px;padding-bottom:6px;border-bottom:1px solid var(--ink)}
+h2 small{font:400 14px "Libre Franklin",sans-serif;color:var(--muted);margin-left:8px}
+.sub{font:400 14px/1.5 "Libre Franklin",sans-serif;color:var(--muted);margin:6px 0 0}
+.head{display:flex;flex-wrap:wrap;gap:14px 24px;justify-content:space-between;align-items:flex-end}
+.btn{font:600 14px/1 "Libre Franklin",sans-serif;padding:12px 16px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;text-decoration:none;border-radius:2px;display:inline-block;cursor:pointer;min-height:40px}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.danger{background:transparent;color:var(--red);border-color:var(--red)}
+.btn.sm{padding:9px 12px;font-size:13px;min-height:36px}
+.btn:hover{box-shadow:2px 2px 0 var(--rule2)}
+/* status = rubber stamp ; settlement = gauge */
+.stamp{display:inline-block;font:600 12px/1 "Libre Franklin",sans-serif;padding:4px 7px 3px;border:1.5px solid currentColor;border-radius:2px;transform:rotate(-1.5deg);letter-spacing:.02em;white-space:nowrap}
+.stamp.issued{color:var(--blue)}.stamp.requested{color:var(--violet)}.stamp.void{color:var(--red);border-style:double;border-width:3px}
+.gauge{display:inline-flex;align-items:center;gap:8px;font:500 13px "Libre Franklin",sans-serif;white-space:nowrap}
+.gauge i{display:block;width:46px;height:7px;border:1px solid var(--ink);background:linear-gradient(90deg,currentColor var(--p),transparent var(--p))}
+.gauge.paid{color:var(--green)}.gauge.partial{color:var(--amber)}.gauge.unpaid{color:var(--muted)}
+.gauge.na{color:var(--muted);font-style:italic}
+.gauge.big{display:flex;width:100%}.gauge.big i{flex:1;width:auto;height:12px}
+/* balances */
+.bal{list-style:none;margin:22px 0 0;padding:0}
+.bal li{padding:18px 0 16px;border-bottom:1px solid var(--rule)}
+.bal .line{display:flex;align-items:baseline;gap:10px}
+.bal .name{font-size:25px;font-weight:500;color:var(--ink);text-decoration:none}
+.bal .name:hover{text-decoration:underline}
+.bal .dots{flex:1;border-bottom:2px dotted var(--rule2);transform:translateY(-5px);min-width:12px}
+.bal .amt{font-size:36px;font-weight:500;line-height:1.1}
+.bal .meta{display:flex;justify-content:space-between;align-items:center;gap:8px 16px;flex-wrap:wrap;font:400 14px "Libre Franklin",sans-serif;color:var(--muted);margin-top:6px}
+.cr{color:var(--red)}.cr b{font:italic 600 .5em "Literata",serif;margin-left:4px}
+.ok{color:var(--green)}
+.legend{font:400 13px "Libre Franklin",sans-serif;color:var(--muted);margin:10px 0 0}
+/* tables */
+table{width:100%;border-collapse:collapse}
+th{font:500 13px "Libre Franklin",sans-serif;color:var(--muted);text-align:left;padding:8px 10px 8px 0;border-bottom:1.5px solid var(--ink)}
+td{padding:12px 10px 12px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th:last-child,td:last-child{padding-right:0}
+.r{text-align:right}
+.lbl{font:400 13px "Libre Franklin",sans-serif;color:var(--muted)}
+.tw{overflow-x:auto}
+/* statement */
+.range{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end;margin:22px 0 4px;font:500 13px "Libre Franklin",sans-serif}
+.range label{display:flex;flex-direction:column;gap:4px;color:var(--muted)}
+input[type=date],input[type=text]{font:400 15px "Libre Franklin",sans-serif;padding:9px 10px;border:1.5px solid var(--rule2);background:#fff;color:var(--ink);border-radius:2px;min-height:40px}
+.presets{font:400 13px "Libre Franklin",sans-serif;margin:8px 0 0;display:flex;gap:4px 16px;flex-wrap:wrap}
+.st td{padding:10px 10px 10px 0}
+.st .d{white-space:nowrap;color:var(--muted);font:400 14px "Libre Franklin",sans-serif;width:64px}
+.st .t{font-size:16px}
+.st .t a{color:var(--ink);font-weight:500}
+.st .badges{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:7px}
+.st .badges a{font:400 13px "Libre Franklin",sans-serif}
+.st .v a{text-decoration-style:dashed}
+.st .gone{text-decoration:line-through;color:var(--muted)}
+.st .amt{font-size:16px;font-weight:500}.st .neg{color:var(--green)}.st .neg.vd{color:var(--red)}
+.st .bl{font-size:16px;color:var(--ink)}
+.st tr.open td,.st tr.close td{font-style:italic}
+.st tr.close td{border-top:1px solid var(--ink);border-bottom:5px double var(--ink);font-weight:600;font-style:normal;padding-top:14px}
+/* split */
+.step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 4px;margin-top:38px}
+.step>.n{font-size:32px;line-height:1;font-style:italic;color:var(--red);font-weight:500}
+.step h2{margin:0 0 4px;border:0;padding:0;font-size:22px}
+.chk{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--rule);cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:var(--ink);flex:none;margin:0}
+.chk .nm{flex:1}.chk .nm span{display:block;font:400 13px "Libre Franklin",sans-serif;color:var(--muted)}
+.people{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:6px}
+.people .chk{border:0;padding:6px 0}
+.mx th,.mx td{padding-right:8px}
+.mx td:first-child{padding-right:12px}
+.mx tfoot td{border-top:1px solid var(--ink);border-bottom:5px double var(--ink);font-weight:600;padding-top:12px}
+.mx .you{color:var(--muted)}
+.mx .bn small{display:block;font:400 12px "Libre Franklin",sans-serif;color:var(--muted)}
+.form2{display:grid;grid-template-columns:1fr 200px;gap:14px 18px;margin-top:10px}
+.form2 label{display:flex;flex-direction:column;gap:5px;font:500 13px "Libre Franklin",sans-serif;color:var(--muted)}
+.form2 input{width:100%}
+.create{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between;margin-top:26px;padding-top:18px;border-top:1px solid var(--ink)}
+/* invoice */
+.dl{display:grid;grid-template-columns:190px 1fr;gap:0 28px;margin:10px 0 0}
+.dl dt{font:400 14px "Libre Franklin",sans-serif;color:var(--muted);padding:9px 0;border-bottom:1px solid var(--rule)}
+.dl dd{margin:0;padding:8px 0;border-bottom:1px solid var(--rule)}
+.dl dd.tot,.dl dt.tot{border-bottom:5px double var(--ink);font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px 36px;margin-top:22px}
+.card{border:1px solid var(--rule2);padding:16px 18px;background:#fff}
+.card h3{font:600 15px "Libre Franklin",sans-serif;margin:0 0 4px}
+.card p{margin:8px 0 0;font:400 13px/1.5 "Libre Franklin",sans-serif;color:var(--muted)}
+.hist{list-style:none;margin:10px 0 0;padding:0}
+.hist li{display:grid;grid-template-columns:64px 1fr;gap:0 10px;padding:10px 0;border-bottom:1px solid var(--rule)}
+.hist .d{font:400 14px "Libre Franklin",sans-serif;color:var(--muted)}
+.hist .x{font:400 13px "Libre Franklin",sans-serif;color:var(--muted)}
+.actions{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-top:12px}
+/* posting */
+.post th.r,.post td.r{width:120px}
+.post .acct{font-weight:500}.post .acct small{display:block;font:400 12px "Libre Franklin",sans-serif;color:var(--muted)}
+.post .cents{font:400 13px "Libre Franklin",sans-serif;color:var(--muted)}
+.post tfoot td{border-top:1px solid var(--ink);border-bottom:5px double var(--ink);font-weight:600;padding-top:12px}
+.balanced{display:flex;align-items:baseline;gap:10px;margin-top:16px;font-size:19px;color:var(--green);font-weight:600}
+.balanced span{font:400 14px "Libre Franklin",sans-serif;color:var(--muted);font-weight:400}
+@media(max-width:700px){
+ body{font-size:16px}
+ .sheet{margin:10px 0 24px;border-left:0;border-right:0;padding:24px 16px 34px 34px}
+ .sheet::before{left:16px}
+ h1{font-size:30px}
+ .bal .amt{font-size:32px}.bal .name{font-size:23px}
+ .two,.form2{grid-template-columns:minmax(0,1fr)}
+ .dl{grid-template-columns:1fr;}
+ .dl dt{border:0;padding-bottom:0}.dl dt.tot{border:0}
+ .step{grid-template-columns:26px minmax(0,1fr)}.mx{font-size:14px}.mx th,.mx td{padding-right:5px}.mx .bn{min-width:70px}
+ .step>.n{font-size:26px}
+ .na-t thead{display:none}
+ .na-t tr{display:grid;grid-template-columns:1fr auto;grid-template-areas:"inv rem" "state state" "act act";gap:6px 12px;padding:12px 0;border-bottom:1px solid var(--rule)}
+ .na-t td{display:block;border:0;padding:0}
+ .na-t td.inv{grid-area:inv}.na-t td.rem{grid-area:rem}.na-t td.state{grid-area:state}.na-t td.act{grid-area:act}
+ .st thead{display:none}
+ .st tr{display:grid;grid-template-columns:1fr auto;grid-template-areas:"desc amt" "date bal";gap:2px 12px;padding:11px 0;border-bottom:1px solid var(--rule)}
+ .st td{display:block;border:0;padding:0;width:auto}
+ .st td.t{grid-area:desc}.st td.amt{grid-area:amt;text-align:right}.st td.d{grid-area:date;align-self:center}.st td.bl{grid-area:bal;text-align:right;font-size:14px;color:var(--muted)}
+ .st td.bl::before{content:"bal ";font:400 12px "Libre Franklin",sans-serif}
+ .st tr.open,.st tr.close{grid-template-areas:"desc bal";}
+ .st tr.open td.d,.st tr.close td.d{display:none}
+ .st tr.close{border-bottom:5px double var(--ink);border-top:1px solid var(--ink)}
+ .st tr.close td{border:0}
+ .st tr.close td.bl{color:var(--ink);font-size:16px}
+ .st td.amt:empty{display:none}
+}
+</style></head><body>
+<header class="mast"><a class="brand" href="index.html">Roommate Ledger</a>
+<nav aria-label="Screens"><ul><li><a href="index.html" aria-current=page>Balances</a></li><li><a href="split.html">Invoice roommates</a></li><li><a href="statement.html">Sam’s statement</a></li><li><a href="invoice.html">Invoice #43</a></li><li><a href="posting.html">Posting</a></li><li><a href="../index.html">All options</a></li></ul></nav></header>
+<main class="sheet">
+<div class="head"><div><h1>Balances</h1><p class="sub">What each roommate owes you, as of Oct 31, 2026.</p></div>
+<a class="btn" href="split.html">+ Invoice roommates</a></div>
+<ul class="bal">
+<li><div class="line"><a class="name" href="statement.html">Sam</a><span class="dots"></span><span class="fig amt">$25.15</span></div>
+<div class="meta"><span>owes you, across 2 open invoices</span><a class="btn sm" href="https://venmo.com/?txn=charge&amp;recipients=sam-k&amp;amount=25.15&amp;note=Utilities">Request on Venmo</a></div></li>
+<li><div class="line"><a class="name" href="statement.html">Priya</a><span class="dots"></span><span class="fig amt ok">$0.00</span></div>
+<div class="meta"><span class="ok">✓ All paid up. Last payment Oct 27</span></div></li>
+<li><div class="line"><a class="name" href="statement.html">Alex</a><span class="dots"></span><span class="fig amt cr">−$12.40<b>Cr</b></span></div>
+<div class="meta"><span>You owe Alex a credit from an overpayment on Oct 28. It reduces the next invoice.</span></div></li>
+</ul>
+<p class="legend">Positive means the roommate owes you. A minus with Cr is credit in their favour.</p>
+
+<h2>Needs action</h2>
+<table class="na-t"><thead><tr><th>Invoice</th><th>State</th><th class="r">Remaining</th><th></th></tr></thead><tbody>
+<tr><td class="inv"><a href="invoice.html">ConEd Sep</a><div class="lbl">#43 · Sam · due Nov 14</div></td>
+<td class="state"><span class="stamp requested">Requested</span> &nbsp; <span class="gauge partial"><i style="--p:77%"></i>Part paid</span></td>
+<td class="r rem"><span class="fig ">$7.65</span></td><td class="act r"><a class="btn ghost sm" href="invoice.html">Open</a></td></tr>
+<tr><td class="inv"><a href="invoice.html">Internet Sep</a><div class="lbl">#53 · Sam · due Nov 14</div></td>
+<td class="state"><span class="stamp issued">Issued</span> &nbsp; <span class="gauge unpaid"><i style="--p:0%"></i>Unpaid</span></td>
+<td class="r rem"><span class="fig ">$17.50</span></td><td class="act r"><a class="btn ghost sm" href="invoice.html">Request</a></td></tr>
+<tr><td class="inv"><a href="split.html">2 provider bills not yet split</a><div class="lbl">ConEd Oct, Internet Oct</div></td>
+<td class="state"><span class="lbl">Not invoiced to roommates</span></td>
+<td class="r rem"><span class="fig ">$188.64</span></td><td class="act r"><a class="btn ghost sm" href="split.html">Split</a></td></tr>
+</tbody></table>
+
+<h2>You owe providers <small>due soon</small></h2>
+<table class="na-t"><thead><tr><th>Provider bill</th><th>Due</th><th class="r">Amount</th></tr></thead><tbody>
+<tr><td class="inv"><a href="split.html">Internet Oct</a></td><td class="state lbl">Nov 5, in 5 days</td><td class="r rem"><span class="fig ">$70.00</span></td></tr>
+<tr><td class="inv"><a href="split.html">ConEd Oct</a></td><td class="state lbl">Nov 12, in 12 days</td><td class="r rem"><span class="fig ">$118.64</span></td></tr>
+<tr><td class="inv"><b>Total payable</b></td><td></td><td class="r rem"><b><span class="fig ">$188.64</span></b></td></tr>
+</tbody></table>
+</main>
+<footer>Design mock, Option A (paper ledger). Static sample data as of Oct 31, 2026.</footer>
+</body></html>

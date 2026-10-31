@@ -1,0 +1,659 @@
+{
+  "id": "cd8bafe0-0970-4459-ab39-4ecadf449fc9",
+  "prevId": "b08a1a30-cd21-45c8-8a93-d7a540ee46e7",
+  "version": "6",
+  "dialect": "sqlite",
+  "tables": {
+    "accounts": {
+      "name": "accounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "invoice_line_items": {
+      "name": "invoice_line_items",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "invoice_id": {
+          "name": "invoice_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "invoice_line_items_invoice_idx": {
+          "name": "invoice_line_items_invoice_idx",
+          "columns": [
+            "invoice_id",
+            "position"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "invoice_line_items_invoice_id_invoices_id_fk": {
+          "name": "invoice_line_items_invoice_id_invoices_id_fk",
+          "tableFrom": "invoice_line_items",
+          "columnsFrom": [
+            "invoice_id"
+          ],
+          "tableTo": "invoices",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "invoice_line_items_amount_positive": {
+          "name": "invoice_line_items_amount_positive",
+          "value": "\"invoice_line_items\".\"amount_cents\" > 0"
+        }
+      }
+    },
+    "invoice_transitions": {
+      "name": "invoice_transitions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "invoice_id": {
+          "name": "invoice_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "from_status": {
+          "name": "from_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "to_status": {
+          "name": "to_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "at": {
+          "name": "at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "invoice_transitions_invoice_idx": {
+          "name": "invoice_transitions_invoice_idx",
+          "columns": [
+            "invoice_id",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "invoice_transitions_invoice_id_invoices_id_fk": {
+          "name": "invoice_transitions_invoice_id_invoices_id_fk",
+          "tableFrom": "invoice_transitions",
+          "columnsFrom": [
+            "invoice_id"
+          ],
+          "tableTo": "invoices",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "invoices": {
+      "name": "invoices",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payer_id": {
+          "name": "payer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payee_id": {
+          "name": "payee_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "due_date": {
+          "name": "due_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'issued'"
+        },
+        "settlement": {
+          "name": "settlement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'unpaid'"
+        },
+        "applied_cents": {
+          "name": "applied_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "invoices_payer_idx": {
+          "name": "invoices_payer_idx",
+          "columns": [
+            "payer_id",
+            "issued_at"
+          ],
+          "isUnique": false
+        },
+        "invoices_payee_idx": {
+          "name": "invoices_payee_idx",
+          "columns": [
+            "payee_id",
+            "issued_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "invoices_payer_id_parties_id_fk": {
+          "name": "invoices_payer_id_parties_id_fk",
+          "tableFrom": "invoices",
+          "columnsFrom": [
+            "payer_id"
+          ],
+          "tableTo": "parties",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "invoices_payee_id_parties_id_fk": {
+          "name": "invoices_payee_id_parties_id_fk",
+          "tableFrom": "invoices",
+          "columnsFrom": [
+            "payee_id"
+          ],
+          "tableTo": "parties",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "invoices_amount_positive": {
+          "name": "invoices_amount_positive",
+          "value": "\"invoices\".\"amount_cents\" > 0"
+        },
+        "invoices_applied_range": {
+          "name": "invoices_applied_range",
+          "value": "\"invoices\".\"applied_cents\" >= 0 AND \"invoices\".\"applied_cents\" <= \"invoices\".\"amount_cents\""
+        },
+        "invoices_parties_differ": {
+          "name": "invoices_parties_differ",
+          "value": "\"invoices\".\"payer_id\" != \"invoices\".\"payee_id\""
+        }
+      }
+    },
+    "ledger_entries": {
+      "name": "ledger_entries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entry_group_id": {
+          "name": "entry_group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reverses_group_id": {
+          "name": "reverses_group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "party_leg": {
+          "name": "party_leg",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "invoice_id": {
+          "name": "invoice_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ledger_entries_account_time_idx": {
+          "name": "ledger_entries_account_time_idx",
+          "columns": [
+            "account_id",
+            "occurred_at",
+            "amount_cents"
+          ],
+          "isUnique": false
+        },
+        "ledger_entries_account_kind_invoice_idx": {
+          "name": "ledger_entries_account_kind_invoice_idx",
+          "columns": [
+            "account_id",
+            "kind",
+            "invoice_id"
+          ],
+          "isUnique": false
+        },
+        "ledger_entries_group_idx": {
+          "name": "ledger_entries_group_idx",
+          "columns": [
+            "entry_group_id"
+          ],
+          "isUnique": false
+        },
+        "ledger_entries_reverses_idx": {
+          "name": "ledger_entries_reverses_idx",
+          "columns": [
+            "reverses_group_id"
+          ],
+          "isUnique": false
+        },
+        "ledger_entries_invoice_idx": {
+          "name": "ledger_entries_invoice_idx",
+          "columns": [
+            "invoice_id"
+          ],
+          "isUnique": false
+        },
+        "ledger_entries_payment_idx": {
+          "name": "ledger_entries_payment_idx",
+          "columns": [
+            "payment_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ledger_entries_account_id_accounts_id_fk": {
+          "name": "ledger_entries_account_id_accounts_id_fk",
+          "tableFrom": "ledger_entries",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "tableTo": "accounts",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "ledger_entries_invoice_id_invoices_id_fk": {
+          "name": "ledger_entries_invoice_id_invoices_id_fk",
+          "tableFrom": "ledger_entries",
+          "columnsFrom": [
+            "invoice_id"
+          ],
+          "tableTo": "invoices",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "ledger_entries_payment_id_payments_id_fk": {
+          "name": "ledger_entries_payment_id_payments_id_fk",
+          "tableFrom": "ledger_entries",
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "tableTo": "payments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ledger_entries_one_source": {
+          "name": "ledger_entries_one_source",
+          "value": "(\"ledger_entries\".\"invoice_id\" IS NULL) != (\"ledger_entries\".\"payment_id\" IS NULL)"
+        },
+        "ledger_entries_nonzero": {
+          "name": "ledger_entries_nonzero",
+          "value": "\"ledger_entries\".\"amount_cents\" != 0"
+        }
+      }
+    },
+    "parties": {
+      "name": "parties",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "venmo_handle": {
+          "name": "venmo_handle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "payments": {
+      "name": "payments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payer_id": {
+          "name": "payer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payee_id": {
+          "name": "payee_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "method": {
+          "name": "method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "payments_payer_idx": {
+          "name": "payments_payer_idx",
+          "columns": [
+            "payer_id",
+            "paid_at"
+          ],
+          "isUnique": false
+        },
+        "payments_payee_idx": {
+          "name": "payments_payee_idx",
+          "columns": [
+            "payee_id",
+            "paid_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "payments_payer_id_parties_id_fk": {
+          "name": "payments_payer_id_parties_id_fk",
+          "tableFrom": "payments",
+          "columnsFrom": [
+            "payer_id"
+          ],
+          "tableTo": "parties",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "payments_payee_id_parties_id_fk": {
+          "name": "payments_payee_id_parties_id_fk",
+          "tableFrom": "payments",
+          "columnsFrom": [
+            "payee_id"
+          ],
+          "tableTo": "parties",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "payments_amount_positive": {
+          "name": "payments_amount_positive",
+          "value": "\"payments\".\"amount_cents\" > 0"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

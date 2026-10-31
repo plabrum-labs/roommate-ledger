@@ -1,0 +1,21 @@
+# Roommate Ledger
+
+Tracks the utility bills I pay and what my roommates owe me for them. Double-entry ledger on Cloudflare D1, oRPC API,
+Vite + React + TanStack Router frontend, all served from one Cloudflare Worker. See `docs/design.md`.
+
+## Scripts
+
+| Script                      | What it does                                                          |
+| --------------------------- | --------------------------------------------------------------------- |
+| `npm run dev`               | Vite dev server (Worker runs in workerd via the Cloudflare plugin)    |
+| `npm run build` / `preview` | Production build / serve it locally                                   |
+| `npm run type-check`        | Generate the route tree, then `tsc --noEmit`                          |
+| `npm run lint` / `format`   | ESLint (type-aware, strict) / Prettier check                          |
+| `npm test`                  | Vitest inside workerd with a real local D1, migrations auto-applied   |
+| `npm run cf-typegen`        | Regenerate `worker-configuration.d.ts` after editing `wrangler.jsonc` |
+| `npm run db:generate`       | `drizzle-kit generate`: diff `src/db/schema.ts` into `drizzle/` SQL   |
+| `npm run db:migrate:local`  | Apply migrations to the local D1                                      |
+| `npm run openapi`           | Write `openapi.json` from the controllers, then run Orval             |
+| `npm run orval`             | Generate the API client into `src/api-client/generated`               |
+
+The D1 `database_id` in `wrangler.jsonc` is a placeholder. Nothing here deploys or touches a Cloudflare account.

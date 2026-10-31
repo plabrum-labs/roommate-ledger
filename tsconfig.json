@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable", "ESNext.Decorators"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "types": ["vite/client", "node", "@cloudflare/vitest-plugin/types"],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "**/*.mts"],
+  "exclude": ["node_modules", "dist", ".wrangler"]
+}

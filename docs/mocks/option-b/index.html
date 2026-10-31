@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard – Roommate Ledger (Option B, revised)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=Manrope:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head><body>
+<div class="top"><a class="logo" href="index.html"><i><b></b><b></b></i>Roommate Ledger</a><a href="../index.html" style="font-size:13px;color:#C5CAD0">All options</a></div>
+<div class="app"><aside class="side"><a class="logo" href="index.html"><i><b></b><b></b></i>Roommate Ledger</a><nav aria-label="Screens"><a href="index.html" aria-current=page><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/></svg>Dashboard</a><a href="split.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M12 3v6M12 9l-6 6v6M12 9l6 6v6"/></svg>Invoice roommates</a><a href="statement.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM8 8h8M8 12h8"/></svg>Sam’s statement</a><a href="invoice.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Invoice #46</a><a href="posting.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M4 6h16M4 18h16M9 3v18M15 3v18"/></svg>Posting</a></nav>
+<div class="sp">Design mock, Option B (revised).<br>Sample data as of Oct 31, 2026.<br><a href="../index.html">All options</a></div></aside>
+<main class="main">
+<div class="bar-head"><div><h1>Balances</h1><p class="crumb" style="margin:6px 0 0">Oct 31, 2026</p></div>
+<a class="btn blue" href="split.html">+ Invoice roommates</a></div>
+<section class="grid3" aria-label="Balances">
+<article class="bcard owed"><div class="who"><span class="av">S</span>Sam</div>
+<div class="v fig">$33.47</div><div class="cap">Owes you · 1 open invoice</div>
+<div class="go"><a class="btn" href="https://venmo.com/?txn=charge&amp;recipients=sam-k&amp;amount=33.47&amp;note=Jul-Sep%20bills">Request on Venmo</a></div></article>
+<article class="bcard zero"><div class="who"><span class="av">P</span>Priya</div>
+<div class="v fig">$0.00</div><div class="cap">✓ All paid up</div>
+<div class="go"><a class="btn" href="statement.html">View statement</a></div></article>
+<article class="bcard credit"><div class="who"><span class="av">A</span>Alex</div>
+<div class="v fig">−$12.40</div><div class="cap"><span class="sign">CREDIT</span>You owe Alex. Applied to the next invoice.</div>
+<div class="go"><a class="btn" href="statement.html">View statement</a></div></article>
+</section>
+<section class="grid2">
+<div class="card"><h2>Needs action</h2>
+<div class="na"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg></span>
+<div><a class="t" href="invoice.html">Jul–Sep bills</a><div class="s">#46 · Sam · 5 lines · due Nov 14</div><div class="chips"><span class="tag requested">Requested</span><span class="pill partial">◐ Part paid $100.00 of $133.47</span></div></div>
+<div class="r"><span class="fig">$33.47 left</span><a class="btn light sm" href="invoice.html">Open</a></div></div>
+<div class="na"><span class="ic amb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M12 3v6M12 9l-6 6v6M12 9l6 6v6"/></svg></span>
+<div><a class="t" href="split.html">2 provider bills not yet split</a><div class="s">ConEd Oct, Internet Oct</div></div>
+<div class="r"><span class="fig">$188.64</span><a class="btn light sm" href="split.html">Split</a></div></div>
+</div>
+<div class="card"><h2>You owe providers</h2><div class="big fig">$188.64</div>
+<div class="due" style="margin-top:14px"><div><b>Internet Oct</b><span>Due Nov 5</span></div><div style="text-align:right"><span class="when">in 5 days</span><div class="fig" style="font-weight:700;margin-top:4px">$70.00</div></div></div>
+<div class="due"><div><b>ConEd Oct</b><span>Due Nov 12</span></div><div style="text-align:right"><span class="when">in 12 days</span><div class="fig" style="font-weight:700;margin-top:4px">$118.64</div></div></div>
+</div></section>
+</main></div>
+<nav class="tabs" aria-label="Screens"><a href="index.html" aria-current=page><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/></svg>Home</a><a href="split.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M12 3v6M12 9l-6 6v6M12 9l6 6v6"/></svg>Split</a><a href="statement.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM8 8h8M8 12h8"/></svg>Statement</a><a href="invoice.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Invoice</a><a href="posting.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M4 6h16M4 18h16M9 3v18M15 3v18"/></svg>Posting</a></nav>
+</body></html>
