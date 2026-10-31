@@ -33,7 +33,7 @@
     // if it were blank, /api would fall back to edge-only Access protection.
     "CF_ACCESS_AUD": "27182b4590956a07fd7cdcb6592105c59ae0772387f979aa0a3a5141d63e1de0",
     // AUD of the MCP Access app (`terraform output mcp_access_aud`). While blank, /mcp answers 503.
-    "MCP_ACCESS_AUD": ""
+    "MCP_ACCESS_AUD": "711015a29145c03a196c46f9da56aa532d775bdeab084267637c102504377e70"
   },
   "workers_dev": false,
   "preview_urls": false,
