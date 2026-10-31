@@ -19,6 +19,11 @@ variable "hostname" {
   type        = string
 }
 
+variable "mcp_hostname" {
+  description = "Hostname of the MCP server (a second Worker custom domain in wrangler.jsonc, its own Access app)"
+  type        = string
+}
+
 variable "allowed_emails" {
   description = "Emails allowed through Cloudflare Access"
   type        = list(string)
