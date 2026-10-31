@@ -19,3 +19,13 @@ Vite + React + TanStack Router frontend, all served from one Cloudflare Worker. 
 | `npm run orval`             | Generate the API client into `src/api-client/generated`               |
 
 The D1 `database_id` in `wrangler.jsonc` is a placeholder. Nothing here deploys or touches a Cloudflare account.
+
+## Deploying
+
+CI only; never from a laptop. `infra/` (Terraform, state in R2 bucket `plabrum-tf-state` via the S3 backend) owns the D1 database and the
+Cloudflare Access app; wrangler owns the Worker and its custom domain `roommate-ledger.plabrum.com`.
+
+1. Merge an `infra/` change: the **Terraform** workflow plans on the PR (posted as a comment) and applies on `main`.
+2. After the first apply, copy `terraform output d1_database_id` into `wrangler.jsonc` and push.
+3. Every push to `main` runs **Deploy**: checks, tests, build, `wrangler d1 migrations apply --remote`, `wrangler deploy`.
+   Deploy skips the last two while `database_id` is still the placeholder.

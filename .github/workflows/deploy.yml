@@ -1,0 +1,67 @@
+name: Deploy
+
+# Push to main: check, test, build, apply D1 migrations, deploy the Worker. PRs: check + test + build only.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['infra/**', 'docs/**', '**/*.md', '.github/workflows/terraform.yml']
+  pull_request:
+    paths-ignore: ['infra/**', 'docs/**', '**/*.md', '.github/workflows/terraform.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: ${{ github.event_name == 'pull_request' && 'Check + build' || 'Check + deploy' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm run format
+      - name: Generated files are up to date
+        run: |
+          npm run cf-typegen
+          git diff --exit-code -- worker-configuration.d.ts src/routeTree.gen.ts
+      - run: npm run openapi:check
+      - run: npx drizzle-kit check
+      - run: npm test
+      - run: npm run build
+
+      # The D1 database id comes from Terraform (infra/d1.tf). Until it is committed into wrangler.jsonc there is
+      # nothing to deploy to, so skip rather than fail.
+      - name: Database configured?
+        id: db
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          if grep -q '00000000-0000-0000-0000-000000000000' wrangler.jsonc; then
+            echo "D1 database_id is still the placeholder; skipping migrations and deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Migrations run before the deploy, so each one must work with the code that is currently live.
+      - name: Apply D1 migrations
+        if: steps.db.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler d1 migrations apply roommate-ledger --remote
+
+      - name: Deploy Worker
+        if: steps.db.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deploy
