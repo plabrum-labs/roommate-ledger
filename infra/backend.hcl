@@ -1,6 +1,6 @@
-# State lives in Cloudflare R2 through Terraform's S3 backend (R2 speaks the S3 API). Credentials are an R2 API
-# token's S3 key pair, read from AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (org secrets R2_ACCESS_KEY_ID /
-# R2_SECRET_ACCESS_KEY in CI). Passed with `terraform init -backend-config=backend.hcl`.
+# State lives in Cloudflare R2 through Terraform's S3 backend (R2 speaks the S3 API). Credentials come from
+# AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY, which CI derives from CLOUDFLARE_API_TOKEN (see terraform.yml).
+# Passed with `terraform init -backend-config=backend.hcl`.
 bucket = "plabrum-tf-state"
 key    = "roommate-ledger/terraform.tfstate"
 region = "auto"
