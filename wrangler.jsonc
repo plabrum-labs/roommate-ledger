@@ -14,9 +14,8 @@
     {
       "binding": "DB",
       "database_name": "roommate-ledger",
-      // Terraform owns the database (infra/d1.tf); copy `terraform output d1_database_id` here after the first apply.
-      // While this is the zero placeholder, the Deploy workflow skips migrations and deploy.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // Terraform owns the database (infra/d1.tf); this is `terraform output d1_database_id`.
+      "database_id": "b122f9ee-cb8d-42f4-bb1b-38c4dfc41c0c",
       "migrations_dir": "drizzle"
     }
   ],
