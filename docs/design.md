@@ -13,7 +13,7 @@ months later, covering several bills at once), they pay me on Venmo.
 | API      | oRPC (`OpenAPIHandler` only) behind an in-repo decorator layer (`src/framework/`)                                                                                                                                                                                                             |
 | Contract | oRPC `OpenAPIGenerator` → `openapi.json` → Orval → suspense hooks + query options                                                                                                                                                                                                             |
 | Frontend | Vite + React + TanStack Router; loaders prefetch with `ensureQueryData`                                                                                                                                                                                                                       |
-| Auth     | Cloudflare Access (one-time PIN) in front of everything; no auth code beyond JWT verification                                                                                                                                                                                                 |
+| Auth     | Cloudflare Access (one-time PIN) in front of everything; no auth code beyond JWT verification (also re-checked in the Worker for `/api/*` and `/mcp`)                                                                                                                                         |
 
 ## Domain model
 
@@ -409,6 +409,34 @@ signed amount with a running balance (window function over the account's index r
   link to the posting and the source document.
 - **Posting** — the entry group's lines as debit/credit with a balanced check.
 - **Parties** — name, kind, Venmo handle.
+
+## MCP server
+
+A remote MCP server (`src/mcp/`, `docs/mcp-setup.md`) on its own host `mcp.roommate-ledger.plabrum.com`, modelled on
+the soren-em-wedding one. Stateless Streamable HTTP: a fresh server per request, state lives in D1. Hand-written tools
+call the same controllers' read paths and domain services as the API, reusing its zod schemas and presenters, so every
+invariant is shared. Money is integer cents in every schema and described as such. The Access JWT verifier, handler,
+result helpers and in-memory test client are copies marked "Mirrors soren-em-wedding ...; extract on third use".
+
+Host routing (`src/lib/host-routing.ts`): on the MCP host only `/mcp` is served (JSON 404 otherwise); `/mcp` on the main
+host is a 404. The Worker runs first for all requests so the SPA is never served on the MCP host.
+
+Auth (`src/access/`): the MCP host has its own Access app with Managed OAuth. In production `/mcp` requires a valid Access
+JWT for `MCP_ACCESS_AUD` and answers 503 while that is blank (a money-writing remote tool fails closed). `/api/*`
+additionally requires a JWT for `CF_ACCESS_AUD` when set (edge-only while blank, 503 when the team domain is blank).
+`npm run dev` bypasses both.
+
+| Tool                                                                                                                                                                                        | Kind                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `whoami`, `list_parties`, `get_balances` (incl. Venmo link), `get_statement` (by `partyId` or `accountId`), `get_posting`, `list_invoices`, `get_invoice`, `list_payments`, `preview_split` | read-only                                                                                                                           |
+| `record_payment`                                                                                                                                                                            | write, idempotent: the required client `id` is the key; payments cannot be voided                                                   |
+| `record_provider_bill`                                                                                                                                                                      | write; an optional `id` that is reused is rejected                                                                                  |
+| `request_invoice`                                                                                                                                                                           | write: marks a Venmo request as sent, sends nothing                                                                                 |
+| `create_split_invoices`                                                                                                                                                                     | write, idempotent on required `batchId`; rejects if the recomputed preview differs from `expectedTotalCents` / `expectedDraftCount` |
+| `void_invoice`                                                                                                                                                                              | destructive: needs `confirmInvoiceId` equal to `id` and `expectedAmountCents`                                                       |
+
+Not exposed: `createParty`, the generic `createInvoice` / `createInvoices`, payment voids. The server instructions tell the
+model to confirm with the user before any write and that voiding is permanent.
 
 ## Out of scope (for now)
 
