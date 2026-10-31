@@ -9,4 +9,9 @@ import type { CreateInvoicesBodyInvoicesItem } from './createInvoicesBodyInvoice
 export type CreateInvoicesBody = {
   /** @minItems 1 */
   invoices: CreateInvoicesBodyInvoicesItem[];
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  batchId?: string;
 };

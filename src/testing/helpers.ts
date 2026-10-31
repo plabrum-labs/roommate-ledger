@@ -18,6 +18,7 @@ export async function freshDb(): Promise<Db> {
     db.run(sql`DELETE FROM ledger_entries`),
     db.run(sql`DELETE FROM invoice_transitions`),
     db.run(sql`DELETE FROM invoices`),
+    db.run(sql`DELETE FROM invoice_batches`),
     db.run(sql`DELETE FROM invoice_line_items`),
     db.run(sql`DELETE FROM payments`),
     db.run(sql`DELETE FROM accounts`),

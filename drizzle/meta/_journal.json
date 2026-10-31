@@ -22,6 +22,20 @@
       "when": 1793471921811,
       "tag": "0002_line_item_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1793475016262,
+      "tag": "0003_seed_me_party",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793475053887,
+      "tag": "0004_tearful_skrulls",
+      "breakpoints": true
     }
   ]
 }

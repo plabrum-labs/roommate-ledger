@@ -45,7 +45,8 @@ const bills: Bill[] = months.flatMap((month, i) => [
 ])
 
 async function seed(db: Db): Promise<void> {
-  if ((await listParties(db)).length > 0) {
+  // The migrations already create the `me` party.
+  if ((await listParties(db)).some(p => p.id !== 'me')) {
     if (!reset) {
       console.warn('Local database already has data; rerun with --reset to wipe and reseed.')
       return
@@ -53,7 +54,7 @@ async function seed(db: Db): Promise<void> {
     await wipe(db)
   }
 
-  await db.insert(parties).values({ id: 'me', name: 'Me', kind: 'me', venmoHandle: null })
+  await db.insert(parties).values({ id: 'me', name: 'Me', kind: 'me', venmoHandle: null }).onConflictDoNothing()
   for (const [id, name, venmoHandle] of [
     ['sam', 'Sam Rivera', 'sam-rivera'],
     ['alex', 'Alex Chen', 'alexchen'],

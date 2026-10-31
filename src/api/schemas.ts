@@ -66,7 +66,16 @@ export const InvoiceDraft = z.object({
 })
 export type InvoiceDraft = z.infer<typeof InvoiceDraft>
 
-export const InvoiceBatchCreate = z.object({ invoices: z.array(InvoiceDraft).min(1) })
+/**
+ * Client-generated idempotency key for bulk creation. Replaying the same key with the same request returns
+ * the invoices already created; the same key with a different request is a 409.
+ */
+export const BatchId = z.string().min(1).max(128)
+
+export const InvoiceBatchCreate = z.object({
+  invoices: z.array(InvoiceDraft).min(1),
+  batchId: BatchId.optional()
+})
 export type InvoiceBatchCreate = z.infer<typeof InvoiceBatchCreate>
 
 export const InvoiceBatchResult = z.object({ invoices: z.array(InvoiceDetail) })
@@ -84,6 +93,10 @@ export const InvoiceSplit = z.object({
   extraLines: z.array(NewLineItem.extend({ roommateId: z.string().min(1) })).default([])
 })
 export type InvoiceSplit = z.infer<typeof InvoiceSplit>
+
+/** A split to create (rather than preview); `batchId` makes the create idempotent. */
+export const InvoiceSplitCreate = InvoiceSplit.extend({ batchId: BatchId.optional() })
+export type InvoiceSplitCreate = z.infer<typeof InvoiceSplitCreate>
 
 export const SplitDraft = InvoiceDraft.extend({
   issuedAt: z.iso.datetime(),
