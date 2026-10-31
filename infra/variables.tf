@@ -23,3 +23,13 @@ variable "allowed_emails" {
   description = "Emails allowed through Cloudflare Access"
   type        = list(string)
 }
+
+variable "otp_idp_id" {
+  description = "Id of the account's existing one-time-PIN Access identity provider (owned by soren-em-wedding)"
+  type        = string
+
+  validation {
+    condition     = length(var.otp_idp_id) > 0
+    error_message = "otp_idp_id must be set: an Access app with auto-redirect needs exactly one identity provider."
+  }
+}

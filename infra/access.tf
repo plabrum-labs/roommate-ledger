@@ -1,13 +1,6 @@
 # Cloudflare Access in front of the whole app: one-time PIN login, 30-day sessions. The one-time-PIN identity
-# provider is account-level and already exists (created by the soren-em-wedding project), so it is looked up
-# rather than created.
-data "cloudflare_zero_trust_access_identity_providers" "all" {
-  account_id = var.cloudflare_account_id
-}
-
-locals {
-  otp_idp_ids = [for idp in data.cloudflare_zero_trust_access_identity_providers.all.result : idp.id if idp.type == "onetimepin"]
-}
+# provider is account-level and already exists (owned by the soren-em-wedding project's Terraform), so it is
+# referenced by id (var.otp_idp_id) rather than created.
 
 resource "cloudflare_zero_trust_access_policy" "owner" {
   account_id       = var.cloudflare_account_id
@@ -23,7 +16,7 @@ resource "cloudflare_zero_trust_access_application" "app" {
   type                      = "self_hosted"
   session_duration          = "720h"
   app_launcher_visible      = false
-  allowed_idps              = local.otp_idp_ids
+  allowed_idps              = [var.otp_idp_id]
   auto_redirect_to_identity = true
   destinations = [
     { type = "public", uri = var.hostname },
