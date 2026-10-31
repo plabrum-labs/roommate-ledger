@@ -12,11 +12,7 @@ concurrency:
   group: terraform-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  AWS_REGION: us-east-1
-
 permissions:
-  id-token: write # assume the OIDC role for S3 state access
   contents: read
   pull-requests: write # comment the plan on PRs
 
@@ -29,15 +25,12 @@ jobs:
         working-directory: ./infra
     env:
       TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # State backend: R2's S3 API (infra/backend.hcl).
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 
     steps:
       - uses: actions/checkout@v6
-
-      - name: 'Configure AWS credentials (OIDC: state bucket only)'
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
 
       - uses: hashicorp/setup-terraform@v4
         with:
