@@ -51,7 +51,10 @@ resource "cloudflare_zero_trust_access_application" "mcp" {
       enabled                = true
       allow_any_on_localhost = true # Claude Code (CLI) uses a localhost callback
       allow_any_on_loopback  = true
-      allowed_uris           = ["https://claude.ai/api/mcp/auth_callback"]
+      allowed_uris = [
+        "https://claude.ai/api/mcp/auth_callback",
+        "https://chatgpt.com/connector_platform_oauth_redirect",
+      ]
     }
     grant = {
       access_token_lifetime = "1h"
