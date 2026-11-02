@@ -1,5 +1,8 @@
+import { sql } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import { getInvoiceWithLines } from '@/domain/services'
+import { ledger } from '@/ledger'
 import { assertConsistent } from '@/testing/helpers'
 
 import { connectTestClient } from './test-support'
@@ -393,6 +396,56 @@ describe('create_roommate_invoices', () => {
     const replay = (await h.callTool('create_roommate_invoices', batch('f1'))) as { invoices: WithId[] }
     expect(replay.invoices.map(i => i.id).sort()).toEqual(first.invoices.map(i => i.id).sort())
     expect(await h.callTool('get_balances')).toMatchObject({ totalOwedToMeCents: 20000 })
+    await assertConsistent(h.db)
+  })
+})
+
+describe('large invoices (D1 allows 100 bound parameters per statement)', () => {
+  const LINES = 40
+  const big = {
+    id: 'big',
+    payerId: 'sam',
+    payeeId: 'me',
+    description: 'Many lines',
+    dueDate: '2026-03-01',
+    issuedAt: '2026-01-01T00:00:00Z',
+    lineItems: Array.from({ length: LINES }, (_, i) => ({
+      description: `Line ${String(i)}`,
+      category: `cat${String(i)}`,
+      amountCents: 100 + i
+    }))
+  }
+  const total = big.lineItems.reduce((s, l) => s + l.amountCents, 0)
+  const entryCount = async (): Promise<number> => {
+    const [row] = await h.db.all<{ n: number }>(sql`SELECT count(*) AS n FROM ledger_entries WHERE invoice_id = 'big'`)
+    return row?.n ?? 0
+  }
+
+  it('creates, re-posts idempotently, and voids an invoice whose posting spans several statements', async () => {
+    expect(await h.callTool('create_invoice', big)).toMatchObject({ amountCents: total, status: 'issued' })
+    expect(((await h.callTool('get_invoice', { id: 'big' })) as { lineItems: unknown[] }).lineItems).toHaveLength(LINES)
+    expect(await entryCount()).toBe(LINES * 2)
+
+    // Posting again (a new entry group) must insert nothing, even though the original group was written in chunks.
+    const doc = await getInvoiceWithLines(h.db, 'big')
+    await h.db.batch(ledger(h.db).post('invoiceIssued', doc))
+    expect(await entryCount()).toBe(LINES * 2)
+    expect(await h.callTool('get_balances')).toMatchObject({ totalOwedToMeCents: total })
+
+    await h.callTool('void_invoice', { id: 'big', confirmInvoiceId: 'big', expectedAmountCents: total })
+    expect(await entryCount()).toBe(LINES * 4)
+    // Reversing again inserts nothing.
+    await h.db.batch(ledger(h.db).reverse('invoiceIssued', doc))
+    expect(await entryCount()).toBe(LINES * 4)
+    expect(await h.callTool('get_balances')).toMatchObject({ totalOwedToMeCents: 0 })
+    await assertConsistent(h.db)
+  })
+
+  it('records a provider bill with many lines', async () => {
+    const { payerId: _p, payeeId: _q, ...rest } = big
+    expect(await h.callTool('record_provider_bill', { ...rest, id: 'bigbill', providerId: 'coned' })).toMatchObject({
+      amountCents: total
+    })
     await assertConsistent(h.db)
   })
 })

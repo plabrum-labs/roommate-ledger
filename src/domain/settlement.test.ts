@@ -103,7 +103,7 @@ describe('roommate receivable FIFO', () => {
     expect(await count()).toBe(4)
 
     // Directly re-running the reversal inserts nothing.
-    await db.batch([ledger(db).reverse('invoiceIssued', inv, at(7))])
+    await db.batch(ledger(db).reverse('invoiceIssued', inv, at(7)))
     expect(await count()).toBe(4)
     expect(await balance(db, acct.receivable('sam'))).toBe(0)
     const trans = await db.all<{ n: number }>(sql`SELECT count(*) AS n FROM invoice_transitions`)
@@ -113,7 +113,7 @@ describe('roommate receivable FIFO', () => {
 
   it('reverse of a never-posted invoice inserts nothing', async () => {
     const inv = await insertWithoutPosting()
-    await db.batch([ledger(db).reverse('invoiceIssued', inv)])
+    await db.batch(ledger(db).reverse('invoiceIssued', inv))
     expect(await balance(db, acct.receivable('sam'))).toBe(0)
   })
 

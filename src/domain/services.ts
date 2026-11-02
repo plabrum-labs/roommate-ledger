@@ -1,6 +1,7 @@
 import { and, asc, eq, ne, sql } from 'drizzle-orm'
 
 import type { Db } from '@/db/client'
+import { chunkByParameters } from '@/framework/ledger'
 import { invoiceBatches, invoiceLineItems, invoices, invoiceTransitions, parties, payments } from '@/db/schema'
 import { ledger, ME } from '@/ledger'
 
@@ -51,7 +52,8 @@ function issueStatements(db: Db, doc: InvoiceWithLines, batchId: string | null =
   const { lineItems, ...invoice } = doc
   return [
     db.insert(invoices).values({ ...invoice, batchId }),
-    db.insert(invoiceLineItems).values(lineItems),
+    // One row is 6 bound parameters; D1 caps a statement at 100.
+    ...chunkByParameters(lineItems, () => 6).map(chunk => db.insert(invoiceLineItems).values(chunk)),
     ...ledger(db).post('invoiceIssued', doc)
   ] as const
 }
@@ -367,7 +369,7 @@ export async function voidInvoice(db: Db, id: string, at: string, note: string |
     db
       .insert(invoiceTransitions)
       .select(sql`SELECT NULL, ${id}, ${invoice.status}, 'void', ${at}, ${note} WHERE changes() > 0`),
-    ledger(db).reverse('invoiceIssued', invoice, at)
+    ...ledger(db).reverse('invoiceIssued', invoice, at)
   ])
   if (update.meta.changes === 0) throw new Conflict('Already void')
   return getInvoice(db, id)
