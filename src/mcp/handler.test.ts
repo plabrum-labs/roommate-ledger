@@ -161,10 +161,11 @@ describe('guardApi', () => {
 })
 
 describe('host routing', () => {
-  it('serves only /mcp on the MCP host and never /mcp elsewhere', () => {
+  it('serves only / and /mcp on the MCP host and never /mcp elsewhere', () => {
     expect(routeRequest('mcp.roommate-ledger.plabrum.com', '/mcp')).toEqual({ kind: 'mcp' })
+    expect(routeRequest('mcp.roommate-ledger.plabrum.com', '/')).toEqual({ kind: 'mcp' })
     expect(routeRequest('MCP.localhost:5173', '/mcp')).toEqual({ kind: 'mcp' })
-    for (const path of ['/', '/api/balances', '/mcp/x', '/index.html', '/.well-known/x']) {
+    for (const path of ['/api/balances', '/mcp/x', '/index.html', '/.well-known/x']) {
       expect(routeRequest('mcp.roommate-ledger.plabrum.com', path)).toEqual({ kind: 'not-found' })
     }
     expect(routeRequest('roommate-ledger.plabrum.com', '/mcp')).toEqual({ kind: 'not-found' })
@@ -190,9 +191,15 @@ describe('the Worker', () => {
     expect(await toolNames(res)).toHaveLength(14)
   })
 
+  it('answers the MCP host root too (ChatGPT posts there)', async () => {
+    const res = await post('http://mcp.localhost/')
+    expect(res.status).toBe(200)
+    expect(await toolNames(res)).toHaveLength(14)
+  })
+
   it('404s the wrong path on the MCP host and /mcp on the main host', async () => {
     expect((await post('http://mcp.localhost/other')).status).toBe(404)
-    expect((await exports.default.fetch('http://mcp.localhost/')).status).toBe(404)
+    expect((await exports.default.fetch('http://mcp.localhost/index.html')).status).toBe(404)
     expect((await post('http://roommate-ledger.plabrum.com/mcp')).status).toBe(404)
     expect((await post('http://localhost/mcp')).status).toBe(404)
   })

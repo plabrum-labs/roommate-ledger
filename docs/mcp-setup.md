@@ -17,7 +17,7 @@ Design and tool list: `docs/design.md` ("MCP server").
 Production vs dev is `import.meta.env.PROD`, so `npm run preview` (a production build) behaves like production: with
 `MCP_ACCESS_AUD` blank `/mcp` answers 503 there.
 
-Only `/mcp` is served on the MCP host (everything else is a JSON 404, including the SPA), and `/mcp` on the main host is a 404. The Worker runs first for every request (`assets.run_worker_first`) so the SPA can never be served on the MCP host.
+Only `/mcp` and `/` (both MCP; ChatGPT posts to the origin root) are served on the MCP host (everything else is a JSON 404, including the SPA), and `/mcp` on the main host is a 404. The Worker runs first for every request (`assets.run_worker_first`) so the SPA can never be served on the MCP host.
 Managed OAuth's `/.well-known/oauth-*` paths are answered by Access at the edge and never reach the Worker.
 
 ## Rollout
