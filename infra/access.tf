@@ -53,7 +53,8 @@ resource "cloudflare_zero_trust_access_application" "mcp" {
       allow_any_on_loopback  = true
       allowed_uris = [
         "https://claude.ai/api/mcp/auth_callback",
-        "https://chatgpt.com/connector_platform_oauth_redirect",
+        "https://chatgpt.com/connector_platform_oauth_redirect", # ChatGPT legacy connector callback
+        "https://chatgpt.com/connector/oauth/*",                 # ChatGPT apps/plugins: per-connector callback id
       ]
     }
     grant = {
