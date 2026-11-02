@@ -188,13 +188,13 @@ describe('the Worker', () => {
   it('answers /mcp on the MCP host (dev bypass under test) with the tool list', async () => {
     const res = await post('http://mcp.localhost/mcp')
     expect(res.status).toBe(200)
-    expect(await toolNames(res)).toHaveLength(14)
+    expect(await toolNames(res)).toHaveLength(17)
   })
 
   it('answers the MCP host root too (ChatGPT posts there)', async () => {
     const res = await post('http://mcp.localhost/')
     expect(res.status).toBe(200)
-    expect(await toolNames(res)).toHaveLength(14)
+    expect(await toolNames(res)).toHaveLength(17)
   })
 
   it('404s the wrong path on the MCP host and /mcp on the main host', async () => {

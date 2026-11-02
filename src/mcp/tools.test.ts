@@ -39,6 +39,9 @@ describe('registration', () => {
     const byName = new Map(tools.map(t => [t.name, t.annotations]))
     expect([...byName.keys()].sort()).toEqual(
       [
+        'create_invoice',
+        'create_party',
+        'create_roommate_invoices',
         'create_split_invoices',
         'get_balances',
         'get_invoice',
@@ -69,6 +72,9 @@ describe('registration', () => {
       expect(byName.get(name)).toMatchObject({ readOnlyHint: true })
     }
     for (const name of [
+      'create_party',
+      'create_invoice',
+      'create_roommate_invoices',
       'record_payment',
       'record_provider_bill',
       'request_invoice',
@@ -80,17 +86,7 @@ describe('registration', () => {
     expect(byName.get('void_invoice')).toMatchObject({ destructiveHint: true })
     expect(byName.get('record_payment')).toMatchObject({ destructiveHint: false, idempotentHint: true })
     expect(byName.get('create_split_invoices')).toMatchObject({ destructiveHint: false, idempotentHint: true })
-    for (const name of [
-      'createParty',
-      'create_party',
-      'createInvoice',
-      'create_invoice',
-      'createInvoices',
-      'create_invoices',
-      'void_payment'
-    ]) {
-      expect(byName.has(name)).toBe(false)
-    }
+    expect(byName.has('void_payment')).toBe(false)
   })
 
   it('carries instructions about confirming writes', () => {
@@ -324,6 +320,79 @@ describe('void_invoice', () => {
       await h.callTool('void_invoice', { id, confirmInvoiceId: id, expectedAmountCents: 3000 }, { allowError: true })
     ).toMatchObject({ isError: true })
     expect(await h.callTool('get_balances')).toMatchObject({ totalOwedToMeCents: 3000 })
+    await assertConsistent(h.db)
+  })
+})
+
+describe('create_party', () => {
+  it('adds roommates and providers, and refuses a second me or a reused id', async () => {
+    expect(await h.callTool('create_party', { id: 'verizon', name: 'Verizon', kind: 'provider' })).toEqual({
+      id: 'verizon',
+      name: 'Verizon',
+      kind: 'provider',
+      venmoHandle: null
+    })
+    expect(
+      await h.callTool('create_party', { id: 'jo', name: 'Jo', kind: 'roommate', venmoHandle: 'jo-v' })
+    ).toMatchObject({ kind: 'roommate', venmoHandle: 'jo-v' })
+    const generated = (await h.callTool('create_party', { name: 'Gas Co', kind: 'provider' })) as WithId
+    expect(generated.id).not.toBe('')
+    expect(
+      await h.callTool('create_party', { id: 'verizon', name: 'Verizon', kind: 'provider' }, { allowError: true })
+    ).toMatchObject({ isError: true })
+    expect(await h.callTool('create_party', { name: 'Me 2', kind: 'me' }, { allowError: true })).toMatchObject({
+      isError: true
+    })
+    const { parties } = (await h.callTool('list_parties')) as { parties: WithId[] }
+    expect(parties.map(p => p.id)).toEqual(expect.arrayContaining(['verizon', 'jo', generated.id]))
+  })
+})
+
+describe('create_invoice', () => {
+  const charge = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+    id: 'g1',
+    payerId: 'sam',
+    payeeId: 'me',
+    description: 'Groceries',
+    dueDate: '2026-03-01',
+    issuedAt: '2026-01-01T00:00:00Z',
+    lineItems: [{ description: 'Costco run', category: 'groceries', amountCents: 2450 }],
+    ...extra
+  })
+
+  it('creates a one-off roommate charge and rejects a reused id or an illegal direction', async () => {
+    expect(await h.callTool('create_invoice', charge())).toMatchObject({
+      id: 'g1',
+      amountCents: 2450,
+      status: 'issued'
+    })
+    expect(await h.callTool('create_invoice', charge(), { allowError: true })).toMatchObject({ isError: true })
+    expect(
+      await h.callTool('create_invoice', charge({ id: 'g2', payerId: 'sam', payeeId: 'alex' }), { allowError: true })
+    ).toMatchObject({ isError: true })
+    expect(await h.callTool('get_balances')).toMatchObject({ totalOwedToMeCents: 2450 })
+    await assertConsistent(h.db)
+  })
+})
+
+describe('create_roommate_invoices', () => {
+  const batch = (batchId?: string): Record<string, unknown> => ({
+    ...(batchId === undefined ? {} : { batchId }),
+    invoices: ['sam', 'alex'].map(payerId => ({
+      payerId,
+      description: 'Furniture',
+      dueDate: '2026-03-01',
+      issuedAt: '2026-01-01T00:00:00Z',
+      lineItems: [{ description: 'Couch share', category: 'household', amountCents: 10000 }]
+    }))
+  })
+
+  it('creates all invoices at once and replays on batchId', async () => {
+    const first = (await h.callTool('create_roommate_invoices', batch('f1'))) as { invoices: WithId[] }
+    expect(first.invoices).toHaveLength(2)
+    const replay = (await h.callTool('create_roommate_invoices', batch('f1'))) as { invoices: WithId[] }
+    expect(replay.invoices.map(i => i.id).sort()).toEqual(first.invoices.map(i => i.id).sort())
+    expect(await h.callTool('get_balances')).toMatchObject({ totalOwedToMeCents: 20000 })
     await assertConsistent(h.db)
   })
 })

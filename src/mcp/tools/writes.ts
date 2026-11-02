@@ -1,11 +1,22 @@
 // Write MCP tools. They go through the same domain services as the API, so every invariant (legal directions,
-// FIFO, immutability, idempotency) is shared. Deliberately not exposed: createParty, generic createInvoice /
-// createInvoices, and payment voids.
+// FIFO, immutability, idempotency) is shared. Every API write is exposed; payment voids do not exist anywhere.
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 
 import { InvoiceController } from '@/api/invoice.controller'
-import { BatchId, InvoiceCreate, InvoiceDetail, InvoiceSplit, Payment, PaymentCreate, SplitResult } from '@/api/schemas'
+import { PartyController } from '@/api/party.controller'
+import {
+  BatchId,
+  InvoiceBatchResult,
+  InvoiceCreate,
+  InvoiceDetail,
+  InvoiceSplit,
+  Party,
+  PartyCreate,
+  Payment,
+  PaymentCreate,
+  SplitResult
+} from '@/api/schemas'
 import { Invalid } from '@/domain/errors'
 import { createPayment, getInvoice, previewSplit, replaySplit, voidInvoice } from '@/domain/services'
 import { ME } from '@/ledger'
@@ -15,9 +26,107 @@ import { cents, jsonResult, withToolErrors } from './util'
 
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const
 
+/** A line item as tools take it: the expense category is required and money is integer cents. */
+const ToolLineItem = z.object({
+  description: z.string().min(1),
+  category: z.string().min(1).describe('Expense category, e.g. utilities'),
+  amountCents: cents('Line amount')
+})
+
 export function registerWriteTools(server: McpServer, { ctx }: McpToolContext): void {
   const invoices = new InvoiceController()
+  const partyApi = new PartyController()
   const now = (): string => new Date().toISOString()
+
+  server.registerTool(
+    'create_party',
+    {
+      title: 'Add a party',
+      description:
+        'Add a roommate or a provider (ConEd, internet, ...). There is exactly one "me" party and it already ' +
+        'exists. Call list_parties first so you do not add a duplicate. Roommates should carry their Venmo handle ' +
+        '(without the @) so get_balances can build request links; providers have none. Supplying `id` (a short ' +
+        'slug such as "coned") makes a retry safe: reusing an existing id is rejected instead of adding a second ' +
+        'party. Parties cannot be renamed or deleted here.',
+      inputSchema: {
+        ...PartyCreate.shape,
+        id: PartyCreate.shape.id.describe('Optional stable id, e.g. "coned"; a random id is generated if omitted'),
+        venmoHandle: z.string().min(1).nullable().optional().describe('Roommates only: Venmo handle without the @')
+      },
+      outputSchema: Party.shape,
+      annotations: { ...WRITE, idempotentHint: false, title: 'Add a party' }
+    },
+    ({ venmoHandle, ...party }) =>
+      withToolErrors(async () => {
+        const created = await partyApi.create(ctx, { ...party, venmoHandle: venmoHandle ?? null })
+        return jsonResult(`Added ${created.kind} ${created.name} (${created.id})`, created)
+      })
+  )
+
+  server.registerTool(
+    'create_invoice',
+    {
+      title: 'Create an invoice',
+      description:
+        'Create one invoice in either legal direction: a roommate owes me (payerId = roommate, payeeId = "me"), ' +
+        'or I owe a provider (payerId = "me", payeeId = provider). Use it for one-off roommate charges (groceries, ' +
+        'a shared purchase); prefer record_provider_bill for provider bills and preview_split + ' +
+        'create_split_invoices for splitting bills. Supplying `id` makes a retry safe: reusing an id is rejected. ' +
+        'Invoices cannot be edited; to correct one, void it and create a new one.',
+      inputSchema: {
+        ...InvoiceCreate.shape,
+        id: InvoiceCreate.shape.id.describe('Optional idempotency key (a second use of the id is rejected)'),
+        issuedAt: InvoiceCreate.shape.issuedAt.describe('When it was issued; defaults to now'),
+        lineItems: z.array(ToolLineItem).min(1)
+      },
+      outputSchema: InvoiceDetail.shape,
+      annotations: { ...WRITE, idempotentHint: false, title: 'Create an invoice' }
+    },
+    input =>
+      withToolErrors(async () => {
+        const created = await invoices.create(ctx, input)
+        return jsonResult(
+          `Created invoice ${created.id}: ${created.payerId} owes ${created.payeeId} ${String(created.amountCents)} cents`,
+          created
+        )
+      })
+  )
+
+  server.registerTool(
+    'create_roommate_invoices',
+    {
+      title: 'Create roommate invoices',
+      description:
+        'Create several roommate invoices at once (each payer is a roommate, the payee is always me), e.g. ' +
+        'hand-built charges that are not a straight bill split. All or nothing. `batchId` is an optional ' +
+        'idempotency key: reuse it on retry and the same request returns the invoices already created, while a ' +
+        'different request under the same batchId is a conflict. Without it a retry creates duplicates.',
+      inputSchema: {
+        invoices: z
+          .array(
+            z.object({
+              payerId: z.string().min(1).describe('A roommate id from list_parties'),
+              description: z.string(),
+              dueDate: z.iso.date(),
+              issuedAt: z.iso.datetime().optional().describe('Defaults to now'),
+              lineItems: z.array(ToolLineItem).min(1)
+            })
+          )
+          .min(1),
+        batchId: BatchId.optional().describe('Idempotency key, unique per intended batch, reused on retry')
+      },
+      outputSchema: InvoiceBatchResult.shape,
+      annotations: { ...WRITE, idempotentHint: true, title: 'Create roommate invoices' }
+    },
+    input =>
+      withToolErrors(async () => {
+        const result = await invoices.createBatch(ctx, input)
+        return jsonResult(
+          `Created ${String(result.invoices.length)} invoices totalling ${String(result.invoices.reduce((s, i) => s + i.amountCents, 0))} cents`,
+          result
+        )
+      })
+  )
 
   server.registerTool(
     'record_payment',
